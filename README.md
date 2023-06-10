@@ -5,7 +5,7 @@ A small configuration daemon for use with my
 
 Dependencies: zig, libc (with unix domain sockets)
 
-I'm too lazy to write a proper help right now so check out `showHelp()`
+I'm too lazy to write a proper help right now so check out `helpAndExit()`
 on the code or run `dotcfg help` on the executable.
 
 Usage examples:
