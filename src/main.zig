@@ -16,7 +16,7 @@ pub fn die(comptime str: []const u8, args: anytype) noreturn {
     const stderr = std.io.getStdErr().writer();
     stderr.print("error: " ++ str ++ "\n", args) catch {};
 
-    std.os.exit(1);
+    std.posix.exit(1);
 }
 
 pub fn helpAndExit() noreturn {
@@ -63,8 +63,8 @@ pub fn helpAndExit() noreturn {
     ;
 
     const stderr = std.io.getStdErr().writer();
-    _ = stderr.write(help_text) catch std.os.exit(1);
-    std.os.exit(0);
+    _ = stderr.write(help_text) catch std.posix.exit(1);
+    std.posix.exit(0);
 }
 
 pub fn getAddr(path: []const u8) ?c.sockaddr_un {
@@ -100,6 +100,11 @@ const DaemonHashMap = std.HashMap([]u8, []u8, struct {
     }
 }, 80);
 
+pub fn constToMut(comptime T: type, slice: []const T) []T {
+    const arr: [*]T = @ptrFromInt(@intFromPtr(slice.ptr));
+    return arr[0..slice.len];
+}
+
 pub fn daemonProcessLine(line: []const u8, conn: std.fs.File, map: *DaemonHashMap, allocator: Allocator) void {
     var it = std.mem.split(u8, line, ":");
 
@@ -111,7 +116,7 @@ pub fn daemonProcessLine(line: []const u8, conn: std.fs.File, map: *DaemonHashMa
     if (eql(u8, command, "get")) {
         // log.debug(.daemonProcessLine, "got GET", .{});
         const key = it.rest();
-        const key_mut = @intToPtr([*]u8, @ptrToInt(key.ptr))[0..key.len]; // FIXME: try not to spawn a demon
+        const key_mut = constToMut(u8, key);
         if (map.get(key_mut)) |v| {
             stupidWrite(conn, "ok:", .daemonProcessLine);
             stupidWrite(conn, v, .daemonProcessLine);
@@ -155,7 +160,7 @@ pub fn daemonProcessLine(line: []const u8, conn: std.fs.File, map: *DaemonHashMa
 pub fn daemonLoop(allocator: Allocator, addr: c.sockaddr_un) u8 {
     const log = std.log.scoped(.server);
 
-    switch (std.c.getErrno(c.unlink(&addr.sun_path))) {
+    switch (std.posix.errno(c.unlink(&addr.sun_path))) {
         .SUCCESS, .NOENT => {},
         else => |e| {
             log.err("failed to delete old socket: {?}", .{e});
@@ -165,14 +170,14 @@ pub fn daemonLoop(allocator: Allocator, addr: c.sockaddr_un) u8 {
 
     const s_fd = c.socket(c.AF_UNIX, c.SOCK_STREAM, 0);
     if (s_fd == -1) {
-        log.err("failed to create socket: {}", .{std.c.getErrno(-1)});
+        log.err("failed to create socket: {}", .{std.posix.errno(-1)});
         return 1;
     }
     log.debug("server socket opened (fd: {})", .{s_fd});
     defer _ = c.close(s_fd);
 
-    if (c.bind(s_fd, @ptrCast(*const c.sockaddr, &addr), @sizeOf(c.sockaddr_un)) == -1) {
-        log.err("failed to bind socket: {}", .{std.c.getErrno(-1)});
+    if (c.bind(s_fd, @ptrCast(&addr), @sizeOf(c.sockaddr_un)) == -1) {
+        log.err("failed to bind socket: {}", .{std.posix.errno(-1)});
         return 1;
     }
     log.debug("socket succesfully bound", .{});
@@ -197,7 +202,7 @@ pub fn daemonLoop(allocator: Allocator, addr: c.sockaddr_un) u8 {
         const conn = blk: {
             const fd = c.accept(s_fd, null, null);
             if (fd == -1) {
-                log.err("could not accept: {}", .{std.c.getErrno(-1)});
+                log.err("could not accept: {}", .{std.posix.errno(-1)});
             }
 
             break :blk std.fs.File{ .handle = fd };
@@ -234,35 +239,6 @@ pub fn daemonLoop(allocator: Allocator, addr: c.sockaddr_un) u8 {
         }
 
         log.debug("done", .{});
-
-        // read: while (true) {
-        //     var buf: [4096]u8 = undefined;
-
-        //     const len = conn.read(&buf) catch |err| {
-        //         log.err("failed to read: {}", .{err});
-        //         conn.writeAll("READ_ERR\n") catch {}; // if we can, report the error
-        //         continue :connected;
-        //     };
-
-        //     var i: usize = 0;
-        //     while (i < len) : (i += 1) {
-        //         if (buf[i] == '\n') {
-        //             line.appendSlice(buf[0..i]) catch die("OOM", .{});
-        //             line.clearRetainingCapacity(); // keep memory allocated for next line
-        //         }
-        //     }
-
-        //     if (len < buf.len) {
-        //         line.appendSlice(buf[0..i]) catch die("OOM", .{});
-        //         if (line.items.len > 0) {
-        //             log.debug("got line: {s}", .{line.items});
-        //             daemonProcessLine(line.items, conn, &map, allocator);
-        //         }
-
-        //         // We finally finished! Stop reading.
-        //         break :read;
-        //     }
-        // }
     }
 
     return 0;
@@ -279,13 +255,13 @@ const Client = struct {
 
         const s_fd = c.socket(c.AF_UNIX, c.SOCK_STREAM, 0);
         if (s_fd == -1) {
-            die("failed to create socket: {?}", .{std.c.getErrno(-1)});
+            die("failed to create socket: {?}", .{std.posix.errno(-1)});
         }
         errdefer _ = c.close(s_fd);
 
         log.debug("server socket opened (fd: {})", .{s_fd});
 
-        if (c.connect(s_fd, @ptrCast(*const c.sockaddr, &addr), @sizeOf(c.sockaddr_un)) == -1) {
+        if (c.connect(s_fd, @ptrCast(&addr), @sizeOf(c.sockaddr_un)) == -1) {
             die("failed to connect", .{});
         }
 
@@ -327,7 +303,7 @@ const Client = struct {
     }
 
     pub fn sendReceiveAndParse(self: *const Self, msg: []const u8) u8 {
-        var response = self.sendAndReceive(msg) orelse return 1;
+        const response = self.sendAndReceive(msg) orelse return 1;
         defer self.allocator.free(response);
 
         const stdout = std.io.getStdOut();
@@ -366,7 +342,7 @@ pub fn main() u8 {
     const alloc = gpa.allocator();
 
     const default_s_path: [:0]const u8 = "/tmp/dotcfg.default.sock";
-    const s_path = std.os.getenv("DOTCFG_SOCKET") orelse default_s_path;
+    const s_path = std.posix.getenv("DOTCFG_SOCKET") orelse default_s_path;
     log.debug("got socket path: {s}", .{s_path});
 
     const addr = getAddr(s_path) orelse return 1;
@@ -398,7 +374,7 @@ pub fn main() u8 {
             messages.append(msg) catch die("OOM", .{});
         }
 
-        var msg = std.mem.join(alloc, "\n", messages.items) catch die("OOM", .{});
+        const msg = std.mem.join(alloc, "\n", messages.items) catch die("OOM", .{});
         defer alloc.free(msg);
 
         return client.sendReceiveAndParse(msg);
@@ -413,7 +389,7 @@ pub fn main() u8 {
 
         const in = std.io.getStdIn();
 
-        var input = in.reader().readAllAlloc(alloc, usize_max) catch die("OOM", .{});
+        const input = in.reader().readAllAlloc(alloc, usize_max) catch die("OOM", .{});
         defer alloc.free(input);
 
         return client.sendReceiveAndParse(input);

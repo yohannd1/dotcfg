@@ -3,12 +3,20 @@
 A small configuration daemon for use with my
 [dotfiles](https://github.com/YohananDiamond/dotfiles)
 
-Dependencies: zig, libc (with unix domain sockets)
+## build & requirements
 
-I'm too lazy to write a proper help right now so check out `showHelp()`
-on the code or run `dotcfg help` on the executable.
+- libc (POSIX-compatible, with unix domain sockets)
+- zig 0.12.0
 
-Usage examples:
+To build:
+
+```bash
+zig build
+```
+
+## usage
+
+A proper help is on the way. Just a moment.
 
 ```bash
 dotcfg daemon &
@@ -21,3 +29,8 @@ get:dummy
 EOF
 # will output "aargh"
 ```
+
+## to do
+
+* [ ] Write a help file
+* [ ] Reorganize the file (the code is spaghetti rn)
