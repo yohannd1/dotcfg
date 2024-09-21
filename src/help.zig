@@ -16,7 +16,7 @@ const help_text =
     \\  send: send one message per argument
     \\
     \\  stdin-send: same as send, but instead of one command per argument it is one
-    \\  command per line (TODO:implement)
+    \\  command per line
     \\
     \\  help: show this message
     \\
