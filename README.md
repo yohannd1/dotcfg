@@ -33,7 +33,6 @@ EOF
 Here is an excerpt from the output of `dotcfg help`:
 
 ```
-$ dotcfg help
 Usage: dotcfg { daemon | send [MESSAGES...] | stdin-send | help }
 
 COMMANDS
@@ -42,35 +41,43 @@ COMMANDS
 
   send: send one message per argument
 
+  stdin-send: same as send, but instead of one command per argument it is one
+  command per line (TODO:implement)
+
   help: show this message
 
 MESSAGES
 
-  When communicating with the daemon, you send messages. They can be:
+  To communicate with the daemon, the client uses messages, which are one-line strings with commands. They can
+  be of the following types:
 
-  set:<KEY>:<VALUE> to set a property
-    (note that key CANNOT have any commas, but the value can)
+    set:<KEY>:<VALUE> to set a property
+    get:<KEY> to get a property's value
 
-  get:<KEY> to get a property's value
-    (key SHOULD not have any commas)
+    Characters not allowed for the key: ':', '\n'
+    Characters not allowed for the value: '\n'
 
-  Upon dealing with these commands, you can receive responses.
-
-  Successful operations internally return "ok:" but that is stripped out for
-  convenience.
+  Upon dealing with these commands, you can receive responses. The response for successful operations is
+  simply a line containing the option's value.
 
   The following responses are error responses:
 
-  err:missing-command
-  err:missing-key
-  err:unknown-command
-  err:read-error
+    err:missing-command
+    err:missing-key
+    err:unknown-command
+    err:read-error
 
-  If at least one of the responses is an error, the program exits 1 after
-  printing all responses. If an invalid response is detected, the program
-  exits 1 immediately.
+  After outputting all responses, if at least one of them is an error, the program returns 1. If an invalid
+  response is detected, though, the program exits 1 immediately.
 ```
 
 ## to do
 
-* [ ] Reorganize the file (the code is spaghetti rn)
+* [ ] split the code into smaller files and structs
+
+* [ ] automated testing
+
+* [ ] use the standard library for most things instead of directly using
+    C headers
+
+* [ ] upgrade to zig 0.13.0
