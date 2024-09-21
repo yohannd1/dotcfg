@@ -75,9 +75,9 @@ MESSAGES
 
 * [x] split the code into smaller files and structs
 
-* [ ] upgrade to zig 0.13.0
+* [x] use the standard library for most things instead of directly using
+    C headers
+
+* [x] upgrade to zig 0.13.0
 
 * [ ] automated testing
-
-* [ ] use the standard library for most things instead of directly using
-    C headers
