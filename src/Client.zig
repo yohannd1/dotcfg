@@ -2,7 +2,7 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const log = std.log.scoped(.client);
 
-const c = @import("main.zig").c;
+const c = @import("root.zig").c;
 const Self = @This();
 
 const misc = @import("misc.zig");

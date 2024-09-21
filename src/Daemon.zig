@@ -2,8 +2,7 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const eql = std.mem.eql;
 
-const main = @import("main.zig");
-const c = main.c;
+const c = @import("root.zig").c;
 const Self = @This();
 const Literal = @TypeOf(.literal);
 const misc = @import("misc.zig");
@@ -67,7 +66,7 @@ pub fn init(socket_path: []const u8, allocator: Allocator) !Self {
 
 pub fn deinit(self: *Self) void {
     // deinit the connection
-    _ = std.posix.close(self.socket); // FIXME: what does this return, again?
+    std.posix.close(self.socket);
 
     // deinit the map
     var it = self.map.iterator();
@@ -106,6 +105,10 @@ pub fn mainLoop(self: *Self) u8 {
         get_line: while (true) {
             r.readUntilDelimiterArrayList(&line, '\n', misc.usize_max) catch |err| switch (err) {
                 error.OutOfMemory => die("OOM", .{}),
+                error.EndOfStream => {
+                    log.err("failed to read (non-fatal): end of stream", .{});
+                    continue :main_loop;
+                },
                 else => {
                     log.err("failed to read: {}", .{err});
                     conn.writeAll("err:read-error\n") catch {};
@@ -190,48 +193,3 @@ fn constToMut(comptime T: type, slice: []const T) []T {
     const arr: [*]T = @ptrFromInt(@intFromPtr(slice.ptr));
     return arr[0..slice.len];
 }
-
-// pub fn stupidWrite(f: std.fs.File, data: []const u8, comptime scope: @TypeOf(.literal)) void {
-//     _ = f.write(data) catch |err| {
-//         std.log.defaultLog(.err, scope, "failed to write: {}\n", .{err});
-//     };
-// }
-
-// pub fn daemonProcessLine(line: []const u8, conn: std.fs.File, map: *DaemonHashMap, allocator: Allocator) void {
-//     var it = std.mem.split(u8, line, ":");
-
-//     const command = it.next() orelse {
-//         stupidWrite(conn, "err:missing-command\n", .daemonProcessLine);
-//         return;
-//     };
-
-//     if (eql(u8, command, "get")) {
-//         // log.debug(.daemonProcessLine, "got GET", .{});
-//         const key = it.rest();
-//         const key_mut = constToMut(u8, key);
-//         if (map.get(key_mut)) |v| {
-//             stupidWrite(conn, "ok:", .daemonProcessLine);
-//             stupidWrite(conn, v, .daemonProcessLine);
-//             stupidWrite(conn, "\n", .daemonProcessLine);
-//         } else {
-//             stupidWrite(conn, "err:unknown-key\n", .daemonProcessLine);
-//         }
-//     } else if (eql(u8, command, "set")) {
-//         // log.debug(.daemonProcessLine, "got SET", .{});
-
-//         const key = it.next() orelse {
-//             stupidWrite(conn, "err:missing-key\n", .daemonProcessLine);
-//             return;
-//         };
-//         const value = it.rest();
-
-//         daemonSetValue(map, key, value) catch {
-//             stupidWrite(conn, "OOM\n", .daemonProcessLine);
-//             die("OOM", .{});
-//         };
-//         stupidWrite(conn, "ok\n", .daemonProcessLine);
-//     };
-//     } else {
-//         stupidWrite(conn, "err:unknown-command\n", .daemonProcessLine);
-//     }
-// }
