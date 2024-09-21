@@ -6,7 +6,7 @@ A small and fast configuration daemon for use with my
 ## build & requirements
 
 - libc (POSIX-compatible, with unix domain sockets)
-- zig 0.12.0
+- zig 0.13.0
 
 To build:
 
