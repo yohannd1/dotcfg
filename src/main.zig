@@ -26,8 +26,6 @@ pub fn main() u8 {
     const s_path = std.posix.getenv("DOTCFG_SOCKET") orelse default_s_path;
     log.debug("got socket path: {s}", .{s_path});
 
-    const addr = getAddr(s_path) orelse return 1;
-
     var args = std.process.args();
     defer args.deinit();
 
@@ -49,7 +47,7 @@ pub fn main() u8 {
 
         return daemon.mainLoop();
     } else if (eql(u8, action, "send")) {
-        var client = Client.init(addr, alloc);
+        var client = Client.init(s_path, alloc);
         defer client.deinit();
 
         var messages = std.ArrayList([]const u8).init(alloc);
@@ -69,7 +67,7 @@ pub fn main() u8 {
             helpAndExit();
         }
 
-        var client = Client.init(addr, alloc);
+        var client = Client.init(s_path, alloc);
         defer client.deinit();
 
         const in = std.io.getStdIn();
@@ -88,21 +86,4 @@ pub fn main() u8 {
         log.err("unknown action: {s}", .{action});
         helpAndExit();
     }
-}
-
-pub fn getAddr(path: []const u8) ?c.sockaddr_un {
-    const log = std.log.scoped(.getAddr);
-
-    const max_size = @sizeOf(std.meta.fieldInfo(c.sockaddr_un, .sun_path).type);
-    if (path.len + 1 > max_size) {
-        log.err("server socket path too long", .{});
-        return null;
-    }
-
-    var addr = std.mem.zeroes(c.sockaddr_un);
-    addr.sun_family = c.AF_UNIX;
-    std.mem.copyForwards(u8, &addr.sun_path, path);
-    addr.sun_path[path.len] = 0;
-
-    return addr;
 }

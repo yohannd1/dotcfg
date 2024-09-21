@@ -41,7 +41,10 @@ pub fn init(socket_path: []const u8, allocator: Allocator) !Self {
     };
     errdefer _ = std.posix.close(socket);
 
-    var addr = try std.net.Address.initUnix(socket_path);
+    const addr = std.net.Address.initUnix(socket_path) catch |err| {
+        log.err("failed to bind: {}", .{err});
+        return err;
+    };
     std.posix.bind(socket, &addr.any, addr.getOsSockLen()) catch |err| {
         log.err("failed to bind: {}", .{err});
         return err;
@@ -91,10 +94,10 @@ pub fn mainLoop(self: *Self) u8 {
             break :blk std.net.Stream{ .handle = fd };
         };
         defer {
-            log.debug("closing connection with conn #{}", .{conn});
+            log.debug("closing connection with {}", .{conn});
             conn.close();
         }
-        log.debug("accepted #{}", .{conn.handle});
+        log.debug("accepted {}", .{conn});
         self.current_client = conn;
 
         var line = std.ArrayList(u8).init(self.allocator);

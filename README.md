@@ -73,7 +73,7 @@ MESSAGES
 
 ## to do
 
-* [ ] split the code into smaller files and structs
+* [x] split the code into smaller files and structs
 
 * [ ] automated testing
 

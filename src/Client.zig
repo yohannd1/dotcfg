@@ -9,26 +9,29 @@ const misc = @import("misc.zig");
 const die = misc.die;
 
 allocator: Allocator,
-conn: std.fs.File,
+conn: std.net.Stream,
 
-pub fn init(addr: c.sockaddr_un, allocator: Allocator) Self {
-    const s_fd = c.socket(c.AF_UNIX, c.SOCK_STREAM, 0);
-    if (s_fd == -1) {
-        die("failed to create socket: {?}", .{std.posix.errno(-1)});
-    }
-    errdefer _ = c.close(s_fd);
+pub fn init(socket_path: []const u8, allocator: Allocator) Self {
+    const addr = std.net.Address.initUnix(socket_path) catch |err| {
+        die("failed to bind: {}", .{err});
+    };
+
+    const s_fd = std.posix.socket(c.AF_UNIX, c.SOCK_STREAM, 0) catch |err| {
+        die("failed to create socket: {}", .{err});
+    };
+    errdefer _ = std.posix.close(s_fd);
 
     log.debug("server socket opened (fd: {})", .{s_fd});
 
-    if (c.connect(s_fd, @ptrCast(&addr), @sizeOf(c.sockaddr_un)) == -1) {
-        die("failed to connect", .{});
-    }
+    std.posix.connect(s_fd, @ptrCast(&addr), addr.getOsSockLen()) catch |err| {
+        die("failed to connect: {}", .{err});
+    };
 
     log.debug("succesfully connected", .{});
 
     return .{
         .allocator = allocator,
-        .conn = std.fs.File{ .handle = s_fd },
+        .conn = std.net.Stream{ .handle = s_fd },
     };
 }
 
