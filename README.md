@@ -3,7 +3,9 @@
 A small and fast configuration daemon for use with my
 [dotfiles](https://github.com/YohananDiamond/dotfiles)
 
-## build & requirements
+## building
+
+Requirements:
 
 - libc (POSIX-compatible, with unix domain sockets)
 - zig 0.14.0
