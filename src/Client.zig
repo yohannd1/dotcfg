@@ -71,7 +71,7 @@ pub fn sendReceiveAndParse(self: *const Self, msg: []const u8) u8 {
     const stdout = std.io.getStdOut();
 
     var full_success = true;
-    var it = std.mem.split(u8, response, "\n");
+    var it = std.mem.splitSequence(u8, response, "\n");
     while (it.next()) |line| {
         const ok_prefix = "ok:";
         if (std.mem.startsWith(u8, line, ok_prefix)) {

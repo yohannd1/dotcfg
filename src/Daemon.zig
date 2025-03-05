@@ -153,7 +153,7 @@ pub fn setOption(self: *Self, key: []const u8, value: []const u8) Allocator.Erro
 
 /// Process a line and reply accordingly to the connection.
 pub fn processLine(self: *Self, line: []const u8) void {
-    var it = std.mem.split(u8, line, ":");
+    var it = std.mem.splitSequence(u8, line, ":");
 
     const command = it.next() orelse {
         self.write("err:missing-command\n");

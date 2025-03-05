@@ -5,8 +5,6 @@ pub fn build(b: *std.Build) void {
 
     const optimize = b.standardOptimizeOption(.{});
 
-    const usr_include = .{ .cwd_relative = "/usr/include" };
-
     const exe = b.addExecutable(.{
         .name = "dotcfg",
         .root_source_file = b.path("src/main.zig"),
@@ -14,7 +12,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    exe.addIncludePath(usr_include);
+    exe.linkLibC();
     b.installArtifact(exe);
 
     const run_cmd = b.addRunArtifact(exe);
